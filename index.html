@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyderabad Metro Route & Fare Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .line-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        .line-red { background-color: #e53e3e; }
+        .line-blue { background-color: #3b82f6; }
+        .line-green { background-color: #34d399; }
+        #results-container {
+            transition: opacity 0.5s ease-in-out;
+        }
+        /* Watermark Style - Updated */
+.watermark {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    background-color: rgba(0, 123, 255, 0.8); /* Bright blue, semi-transparent */
+    color: #ffffff; /* White text */
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-size: 16px; /* Larger font */
+    font-weight: bold; /* Bolder text */
+    z-index: 1000;
+    pointer-events: none; /* Makes it unclickable */
+}
+        
+.
+
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
+    
+
+    <div class="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+        <header class="bg-blue-600 p-6 text-white text-center">
+            <h1 class="text-2xl md:text-3xl font-bold">Hyderabad Metro Smart Calculator</h1>
+            <p class="text-blue-200 mt-1">Route, Fare & Time at your fingertips</p>
+        </header>
+
+        <main class="p-6 md:p-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                <div>
+                    <label for="start-station" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Station</label>
+                    <select id="start-station" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+                <div>
+                    <label for="end-station" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Station</label>
+                    <select id="end-station" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+            </div>
+            
+            <button id="calculate-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg mt-6 transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800">
+                <i class="fas fa-route mr-2"></i>Calculate Route
+            </button>
+
+            <div id="error-message" class="hidden mt-4 text-center text-red-500 font-medium p-3 bg-red-100 dark:bg-red-900 dark:text-red-300 rounded-lg"></div>
+
+            <!-- Results Section -->
+            <div id="results-container" class="hidden mt-8 opacity-0">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                    <div class="bg-blue-50 dark:bg-blue-900/50 p-4 rounded-lg">
+                        <p class="text-sm text-blue-800 dark:text-blue-300 font-semibold">FARE</p>
+                        <p id="fare-result" class="text-2xl font-bold text-blue-600 dark:text-blue-400"></p>
+                    </div>
+                    <div class="bg-green-50 dark:bg-green-900/50 p-4 rounded-lg">
+                        <p class="text-sm text-green-800 dark:text-green-300 font-semibold">STATIONS</p>
+                        <p id="stations-result" class="text-2xl font-bold text-green-600 dark:text-green-400"></p>
+                    </div>
+                    <div class="bg-yellow-50 dark:bg-yellow-900/50 p-4 rounded-lg">
+                        <p class="text-sm text-yellow-800 dark:text-yellow-300 font-semibold">TIME</p>
+                        <p id="time-result" class="text-2xl font-bold text-yellow-600 dark:text-yellow-400"></p>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">Your Route:</h3>
+                    <div id="route-details" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 max-h-60 overflow-y-auto bg-gray-50 dark:bg-gray-800/50">
+                        <!-- Route steps will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer class="text-center text-xs text-gray-400 dark:text-gray-500 p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            Fare and time are estimates. For educational purposes.
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DATA STORE ---
+            const metroData = {
+                stations: [
+                    // Red Line
+                    { id: 'R1', name: 'Miyapur', line: 'Red' },
+                    { id: 'R2', name: 'JNTU College', line: 'Red' },
+                    { id: 'R3', name: 'KPHB Colony', line: 'Red' },
+                    { id: 'R4', name: 'Kukatpally', line: 'Red' },
+                    { id: 'R5', name: 'Balanagar', line: 'Red' },
+                    { id: 'R6', name: 'Moosapet', line: 'Red' },
+                    { id: 'R7', name: 'Bharat Nagar', line: 'Red' },
+                    { id: 'R8', name: 'Erragadda', line: 'Red' },
+                    { id: 'R9', name: 'ESI Hospital', line: 'Red' },
+                    { id: 'R10', name: 'S R Nagar', line: 'Red' },
+                    { id: 'R11', name: 'Ameerpet', line: 'Red' }, // Interchange
+                    { id: 'R12', name: 'Punjagutta', line: 'Red' },
+                    { id: 'R13', name: 'Irrum Manzil', line: 'Red' },
+                    { id: 'R14', name: 'Khairatabad', line: 'Red' },
+                    { id: 'R15', name: 'Lakdi-ka-pul', line: 'Red' },
+                    { id: 'R16', name: 'Assembly', line: 'Red' },
+                    { id: 'R17', name: 'Nampally', line: 'Red' },
+                    { id: 'R18', name: 'Gandhi Bhavan', line: 'Red' },
+                    { id: 'R19', name: 'Osmania Medical College', line: 'Red' },
+                    { id: 'R20', name: 'MG Bus Station', line: 'Red' }, // Interchange
+                    { id: 'R21', name: 'Malakpet', line: 'Red' },
+                    { id: 'R22', name: 'New Market', line: 'Red' },
+                    { id: 'R23', name: 'Musarambagh', line: 'Red' },
+                    { id: 'R24', name: 'Dilsukhnagar', line: 'Red' },
+                    { id: 'R25', name: 'Chaitanyapuri', line: 'Red' },
+                    { id: 'R26', name: 'Victoria Memorial', line: 'Red' },
+                    { id: 'R27', name: 'LB Nagar', line: 'Red' },
+                    // Blue Line
+                    { id: 'B1', name: 'Nagole', line: 'Blue' },
+                    { id: 'B2', name: 'Uppal', line: 'Blue' },
+                    { id: 'B3', name: 'Survey of India', line: 'Blue' },
+                    { id: 'B4', name: 'NGRI', line: 'Blue' },
+                    { id: 'B5', name: 'Habsiguda', line: 'Blue' },
+                    { id: 'B6', name: 'Tarnaka', line: 'Blue' },
+                    { id: 'B7', name: 'Mettuguda', line: 'Blue' },
+                    { id: 'B8', name: 'Secunderabad East', line: 'Blue' },
+                    { id: 'B9', name: 'Parade Ground', line: 'Blue' }, // Interchange
+                    { id: 'B10', name: 'Paradise', line: 'Blue' },
+                    { id: 'B11', name: 'Rasoolpura', line: 'Blue' },
+                    { id: 'B12', name: 'Prakash Nagar', line: 'Blue' },
+                    { id: 'B13', name: 'Begumpet', line: 'Blue' },
+                    { id: 'B14', name: 'Ameerpet', line: 'Blue' }, // Interchange
+                    { id: 'B15', name: 'Madhura Nagar', line: 'Blue' },
+                    { id: 'B16', name: 'Yousufguda', line: 'Blue' },
+                    { id: 'B17', name: 'Jubilee Hills Road No 5', line: 'Blue' },
+                    { id: 'B18', name: 'Jubilee Hills Check Post', line: 'Blue' },
+                    { id: 'B19', name: 'Peddamma Gudi', line: 'Blue' },
+                    { id: 'B20', name: 'Madhapur', line: 'Blue' },
+                    { id: 'B21', name: 'Durgam Cheruvu', line: 'Blue' },
+                    { id: 'B22', name: 'Hitec City', line: 'Blue' },
+                    { id: 'B23', name: 'Raidurg', line: 'Blue' },
+                    // Green Line
+                    { id: 'G1', name: 'JBS Parade Ground', line: 'Green' }, // Interchange
+                    { id: 'G2', name: 'Secunderabad West', line: 'Green' },
+                    { id: 'G3', name: 'Gandhi Hospital', line: 'Green' },
+                    { id: 'G4', name: 'Musheerabad', line: 'Green' },
+                    { id: 'G5', name: 'RTC X Roads', line: 'Green' },
+                    { id: 'G6', name: 'Chikkadpally', line: 'Green' },
+                    { id: 'G7', name: 'Narayanguda', line: 'Green' },
+                    { id: 'G8', name: 'Sultan Bazar', line: 'Green' },
+                    { id: 'G9', name: 'MG Bus Station', line: 'Green' } // Interchange
+                ],
+            
+                fare: {
+                    base: 10,
+                    perStation: 2.5 
+                },
+                timePerStation: 2.5 
+            };
+
+            
+            const graph = {};
+            
+            
+            const stationMap = new Map(metroData.stations.map(s => [s.id, s]));
+            
+            metroData.stations.forEach(station => {
+                graph[station.id] = [];
+            });
+
+            const addEdge = (id1, id2) => {
+                if (graph[id1] && graph[id2]) {
+                    graph[id1].push(id2);
+                    graph[id2].push(id1);
+                }
+            };
+            
+            // Connect stations on the same line
+            const lines = { Red: [], Blue: [], Green: [] };
+            metroData.stations.forEach(s => lines[s.line].push(s.id));
+            
+            Object.values(lines).forEach(lineStations => {
+                for (let i = 0; i < lineStations.length - 1; i++) {
+                    addEdge(lineStations[i], lineStations[i+1]);
+                }
+            });
+
+            // Manually handle interchange connections
+            addEdge('R11', 'B14'); // Ameerpet
+            addEdge('R20', 'G9'); // MG Bus Station
+            addEdge('B9', 'G1'); // Parade Ground
+
+            // --- UI ELEMENTS ---
+            const startStationSelect = document.getElementById('start-station');
+            const endStationSelect = document.getElementById('end-station');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const resultsContainer = document.getElementById('results-container');
+            const errorMessage = document.getElementById('error-message');
+
+            // --- FUNCTIONS ---
+            function populateDropdowns() {
+                const sortedStations = [...metroData.stations].sort((a, b) => a.name.localeCompare(b.name));
+                sortedStations.forEach(station => {
+                    const option1 = new Option(`${station.name} (${station.line})`, station.id);
+                    const option2 = new Option(`${station.name} (${station.line})`, station.id);
+                    startStationSelect.add(option1);
+                    endStationSelect.add(option2);
+                });
+                endStationSelect.selectedIndex = 10; // Pre-select a different station
+            }
+
+            function findShortestPath(startId, endId) {
+                const queue = [[startId]];
+                const visited = new Set([startId]);
+
+                while (queue.length > 0) {
+                    const path = queue.shift();
+                    const node = path[path.length - 1];
+
+                    if (node === endId) {
+                        return path.map(id => stationMap.get(id));
+                    }
+
+                    (graph[node] || []).forEach(neighbor => {
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            const newPath = [...path, neighbor];
+                            queue.push(newPath);
+                        }
+                    });
+                }
+                return null; // No path found
+            }
+
+            function calculateFare(path) {
+                const numStations = path.length - 1;
+                if (numStations <= 1) return metroData.fare.base;
+                const fare = metroData.fare.base + (numStations * metroData.fare.perStation);
+                return Math.ceil(fare / 5) * 5; // Round to nearest 5
+            
+            }
+
+            function calculateTime(path) {
+                return (path.length - 1) * metroData.timePerStation;
+            }
+
+            function displayResults(path, fare, time) {
+                document.getElementById('fare-result').textContent = `₹ ${fare}`;
+                document.getElementById('stations-result').textContent = `${path.length - 1}`;
+                document.getElementById('time-result').textContent = `~ ${time} min`;
+
+                const routeDetails = document.getElementById('route-details');
+                routeDetails.innerHTML = '';
+                
+                path.forEach((station, index) => {
+                    const li = document.createElement('div');
+                    li.className = 'flex items-center p-2 rounded-md';
+                    
+                    const lineClass = `line-${station.line.toLowerCase()}`;
+                    
+                    li.innerHTML = `
+                        <span class="line-dot ${lineClass}"></span>
+                        <span class="font-medium text-gray-800 dark:text-gray-200">${station.name}</span>
+                    `;
+                    
+                    if (index > 0) {
+                        const prevStation = path[index - 1];
+                        if (station.line !== prevStation.line) {
+                            li.innerHTML += `<span class="ml-auto text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/50 px-2 py-1 rounded-full">Change to ${station.line} Line</span>`;
+                            li.classList.add('mt-2', 'pt-3', 'border-t', 'border-dashed', 'border-gray-300', 'dark:border-gray-600');
+                        }
+                    }
+                    
+                    routeDetails.appendChild(li);
+                });
+
+                errorMessage.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+                setTimeout(() => resultsContainer.classList.remove('opacity-0'), 10); // Fade in
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.classList.remove('hidden');
+                resultsContainer.classList.add('hidden');
+            }
+
+            // --- EVENT LISTENERS ---
+            calculateBtn.addEventListener('click', () => {
+                const startId = startStationSelect.value;
+                const endId = endStationSelect.value;
+
+                if (startId === endId) {
+                    showError('Start and End stations cannot be the same. Please select different stations.');
+                    return;
+                }
+
+                const path = findShortestPath(startId, endId);
+
+                if (path) {
+                    const fare = calculateFare(path);
+                    const time = calculateTime(path);
+                    displayResults(path, fare, time);
+                } else {
+                    showError('Could not find a route. Please try again.');
+                }
+            });
+
+            // --- INITIALIZATION ---
+            populateDropdowns();
+        });
+    </script>
+    <div class="watermark">Created by [DARSHAK SAI]</div>
+</body>
+</html>
